@@ -1,29 +1,61 @@
 import pysftp
 import os
 from csv import reader
+import pygsheets
+import pandas
+import sys
 
 FTP_HOSTNAME = 'x.x.x.x'
 FTP_USER = ''
 FTP_PASSWORD = ''
+gc = pygsheets.authorize(
+    service_file='sunlit-loop-377508-35c83e9545bc.json')
+
+# open_by_key , open_by_url
+sh = gc.open_by_key('1pMMHbdiBs2k2Nf3LX9nizKHylisO4Lmog3iYUKd7dLk')
+wks = sh[0]
 FTP_DIR = "/root/csvs/"
 LOCAL_DIR = "csvs/"
 
-with pysftp.Connection(host=FTP_HOSTNAME, username=FTP_USER, password=FTP_PASSWORD) as sftp:
-    print("Connection successfully established ... ")
+if (sys.argv[1] == 'to-sheet'):
 
-    files = sftp.listdir_attr(FTP_DIR)
-    for f in files:
-        print(f.filename)
-        sftp.get(FTP_DIR + f.filename, LOCAL_DIR + f.filename)
+    with pysftp.Connection(host=FTP_HOSTNAME, username=FTP_USER, password=FTP_PASSWORD) as sftp:
+        print("Connected to FTP")
 
-for root, dirs, files in os.walk(LOCAL_DIR):
-    for file in files:
-        print(file)
-        if file.endswith(".csv"):
-            with open(LOCAL_DIR + file, 'r') as read_obj:
-                # pass the file object to reader() to get the reader object
-                csv_reader = reader(read_obj)
-                # Iterate over each row in the csv using reader object
-                for row in csv_reader:
-                    # row variable is a list that represents a row in csv
-                    print(row)
+        files = sftp.listdir_attr(FTP_DIR)
+        for f in files:
+            print(f.filename)
+            sftp.get(FTP_DIR + f.filename, LOCAL_DIR + f.filename)
+
+    for root, dirs, files in os.walk(LOCAL_DIR):
+        for file in files:
+            if file.endswith(".csv"):
+                df = pandas.read_csv(LOCAL_DIR + file)
+
+                # If the number of rows within the worksheet is less than the dataframe:
+                if wks.rows < df.shape[0]:
+                    number_of_rows_to_add = df.shape[0] - wks.rows + 1
+                    # Adding the required number of rows
+                    wks.add_rows(number_of_rows_to_add)
+                # If the number of cols within the worksheet is less than the dataframe:
+                elif wks.cols < df.shape[1]:
+                    number_of_cols_to_add = df.shape[1] - wks.cols + 1
+                    wks.add_cols(number_of_cols_to_add)
+                else:
+                    pass
+
+                wks.clear
+                wks.set_dataframe(df, start=(1, 1))
+                print('Data uploaded to Google Sheet')
+
+if (sys.argv[1] == 'to-ftp'):
+    df = wks.get_as_df()
+    df.to_csv(LOCAL_DIR + 'data1.csv', index=False)
+    print('Data downloaded from Sheet')
+
+    sftp = pysftp.Connection(
+        host=FTP_HOSTNAME, username=FTP_USER, password=FTP_PASSWORD)
+    print('Connected to FTP')
+    sftp.put(LOCAL_DIR + 'data1.csv', FTP_DIR + 'data1.csv')
+    sftp.close()
+    print('Data uploaded to FTP')
