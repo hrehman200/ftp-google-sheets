@@ -4,12 +4,15 @@ from csv import reader
 import pygsheets
 import pandas
 import sys
+from ftplib import FTP
+
+APP_PATH = os.path.abspath(os.path.dirname(__file__)) + '/'
 
 FTP_HOSTNAME = 'x.x.x.x'
 FTP_USER = ''
 FTP_PASSWORD = ''
 gc = pygsheets.authorize(
-    service_file='sunlit-loop-377508-35c83e9545bc.json')
+    service_file=APP_PATH + 'sunlit-loop-377508-35c83e9545bc.json')
 
 # open_by_key , open_by_url
 sh = gc.open_by_key('1pMMHbdiBs2k2Nf3LX9nizKHylisO4Lmog3iYUKd7dLk')
@@ -17,15 +20,20 @@ wks = sh[0]
 FTP_DIR = "/root/csvs/"
 LOCAL_DIR = "csvs/"
 
+ftp = FTP(FTP_HOSTNAME)
+ftp.login(user=FTP_USER, passwd=FTP_PASSWORD)
+ftp.cwd(FTP_DIR)
+
 if (sys.argv[1] == 'to-sheet'):
 
-    with pysftp.Connection(host=FTP_HOSTNAME, username=FTP_USER, password=FTP_PASSWORD) as sftp:
-        print("Connected to FTP")
+    print("Connected to FTP")
 
-        files = sftp.listdir_attr(FTP_DIR)
-        for f in files:
-            print(f.filename)
-            sftp.get(FTP_DIR + f.filename, LOCAL_DIR + f.filename)
+    files = filenames = ftp.nlst()
+    for f in files:
+        if f.endswith(".csv"):
+            print(f)
+            ftp.retrbinary("RETR " + f, open(LOCAL_DIR + f, 'wb').write)
+            print(f + ' downloaded from FTP')
 
     for root, dirs, files in os.walk(LOCAL_DIR):
         for file in files:
@@ -49,13 +57,14 @@ if (sys.argv[1] == 'to-sheet'):
                 print('Data uploaded to Google Sheet')
 
 if (sys.argv[1] == 'to-ftp'):
-    df = wks.get_as_df()
-    df.to_csv(LOCAL_DIR + 'data1.csv', index=False)
-    print('Data downloaded from Sheet')
+    files = os.listdir(LOCAL_DIR)
+    for f in files:
+        if f.endswith(".csv"):
+            df = wks.get_as_df()
+            df.to_csv(LOCAL_DIR + f, index=False)
+            print('Data downloaded from Sheet')
 
-    sftp = pysftp.Connection(
-        host=FTP_HOSTNAME, username=FTP_USER, password=FTP_PASSWORD)
-    print('Connected to FTP')
-    sftp.put(LOCAL_DIR + 'data1.csv', FTP_DIR + 'data1.csv')
-    sftp.close()
-    print('Data uploaded to FTP')
+            file = open(LOCAL_DIR + f, "rb")
+            ftp.storbinary("STOR " + f, file)
+            file.close()
+            print('Data uploaded to FTP')
