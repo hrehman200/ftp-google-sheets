@@ -6,6 +6,7 @@ import os
 
 APP_ID = 'xxx'
 CLIENT_SECRET = 'xxx'
+APP_PATH = os.path.abspath(os.path.dirname(__file__)) + '/'
 SCOPES = ["Files.ReadWrite.All"]
 
 AUTHORITY_URL = "https://login.microsoftonline.com/consumers/"
@@ -29,7 +30,7 @@ def procure_new_tokens_from_user() -> tuple:
     # example: authorization_code = "M.R3_BAY.ec1e0d91-e035-0065-f757-494a9c206744"
     tokenDictionary = client_instance.acquire_token_by_authorization_code(
         code=authorization_code, scopes=SCOPES)
-    print(tokenDictionary)
+    # print(tokenDictionary)
     access_token = tokenDictionary["access_token"]
     refresh_token = tokenDictionary["refresh_token"]
     name = tokenDictionary["id_token_claims"]["name"]
@@ -38,7 +39,7 @@ def procure_new_tokens_from_user() -> tuple:
 
 def load_access_token_from_file() -> str:
     try:
-        with open("access_token.txt") as f:
+        with open(APP_PATH + "access_token.txt") as f:
             line = f.readline()
         return line
     except:
@@ -47,7 +48,7 @@ def load_access_token_from_file() -> str:
 
 def load_refresh_token_from_file() -> str:
     try:
-        with open("refresh_token.txt") as f:
+        with open(APP_PATH + "refresh_token.txt") as f:
             line = f.readline()
         return line
     except:
@@ -55,13 +56,13 @@ def load_refresh_token_from_file() -> str:
 
 
 def save_access_token(token: str):
-    with open("access_token.txt", "w") as f:
+    with open(APP_PATH + "access_token.txt", "w") as f:
         f.write(token)
     return
 
 
 def save_refresh_token(token: str):
-    with open("refresh_token.txt", "w") as f:
+    with open(APP_PATH + "refresh_token.txt", "w") as f:
         f.write(token)
     return
 
@@ -90,9 +91,9 @@ def get_new_access_token_using_refresh_token(refresh_token: str):
     }
 
     response = requests.post(url=request_url, headers=headers, data=payload)
-    print(response.content)
+    # print(response.content)
     responseText = response.text
-    print(responseText)
+    # print(responseText)
     j = json.loads(responseText)
 
     return j["access_token"]
