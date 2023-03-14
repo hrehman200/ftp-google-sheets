@@ -4,7 +4,6 @@ from csv import reader
 import pygsheets
 import pandas
 import sys
-from ftplib import FTP
 
 APP_PATH = os.path.abspath(os.path.dirname(__file__)) + '/'
 
@@ -12,29 +11,24 @@ gc = pygsheets.authorize(
     service_file=APP_PATH + 'sunlit-loop-377508-35c83e9545bc.json')
 
 # open_by_key , open_by_url
-sh = gc.open_by_key('1VGiJ1XxRUv1fUvALYV5V2yUFkuC9T4_NPhQhb5Jcpw0')
-wks = sh[2]
+sh = gc.open_by_key('xxx')
+wks = sh[0]
 
 FTP_HOSTNAME = 'xxx'
 FTP_USER = 'xxx'
 FTP_PASSWORD = 'xxx'
-FTP_DIR = "/Products/"
+FTP_DIR = "/httpdocs/export/ORDERS/"
 LOCAL_DIR = APP_PATH + "csvs/"
-
-ftp = FTP(FTP_HOSTNAME)
-ftp.login(user=FTP_USER, passwd=FTP_PASSWORD)
-ftp.cwd(FTP_DIR)
 
 if (sys.argv[1] == 'to-sheet'):
 
-    print("Connected to FTP")
+    with pysftp.Connection(host=FTP_HOSTNAME, username=FTP_USER, password=FTP_PASSWORD, port=2022) as sftp:
+        print("Connected to SFTP")
 
-    files = filenames = ftp.nlst()
-    for f in files:
-        if f.endswith(".csv"):
-            print(f)
-            ftp.retrbinary("RETR " + f, open(LOCAL_DIR + f, 'wb').write)
-            print(f + ' downloaded from FTP')
+        files = sftp.listdir_attr(FTP_DIR)
+        for f in files:
+            print(f.filename)
+            sftp.get(FTP_DIR + f.filename, LOCAL_DIR + f.filename)
 
     for root, dirs, files in os.walk(LOCAL_DIR):
         for file in files:
@@ -66,7 +60,9 @@ if (sys.argv[1] == 'to-ftp'):
             df.to_csv(LOCAL_DIR + f, index=False)
             print('Data downloaded from Sheet')
 
-            file = open(LOCAL_DIR + f, "rb")
-            ftp.storbinary("STOR " + f, file)
-            file.close()
-            print('Data uploaded to FTP')
+            sftp = pysftp.Connection(
+                host=FTP_HOSTNAME, username=FTP_USER, password=FTP_PASSWORD, port=2022)
+            print('Connected to FTP')
+            sftp.put(LOCAL_DIR + f, FTP_DIR + f)
+            sftp.close()
+            print('Data uploaded to SFTP')
