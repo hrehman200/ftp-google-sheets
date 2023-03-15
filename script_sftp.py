@@ -33,8 +33,13 @@ if (sys.argv[1] == 'to-sheet'):
     for root, dirs, files in os.walk(LOCAL_DIR):
         for file in files:
             if file.endswith(".csv"):
-                print(file)
-                df = pandas.read_csv(LOCAL_DIR + file)
+                print('Reading ' + file)
+                try:
+                    df = pandas.read_csv(LOCAL_DIR + file)
+                except:
+                    df = pandas.read_csv(LOCAL_DIR + file, sep='|')
+
+                df = df.fillna('')
 
                 # If the number of rows within the worksheet is less than the dataframe:
                 if wks.rows < df.shape[0]:
