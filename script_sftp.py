@@ -35,9 +35,9 @@ if (sys.argv[1] == 'to-sheet'):
             if file.endswith(".csv"):
                 print('Reading ' + file)
                 try:
-                    df = pandas.read_csv(LOCAL_DIR + file)
+                    df = pandas.read_csv(LOCAL_DIR + file, dtype = str)
                 except:
-                    df = pandas.read_csv(LOCAL_DIR + file, sep='|')
+                    df = pandas.read_csv(LOCAL_DIR + file, sep='|', dtype = str)
 
                 df = df.fillna('')
 
